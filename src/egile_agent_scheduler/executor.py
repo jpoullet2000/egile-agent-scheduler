@@ -306,18 +306,19 @@ class AgentExecutor:
                         logger.warning(f"Encountered known Agno bug: {error_msg}")
                         logger.warning("Attempting direct execution workaround...")
                         
-                        # If this is the investment agent, use direct tool calling
+                        # Check if plugin implements execute_task_direct method
                         plugin = self._plugins_cache.get(agent_name)
-                        if agent_name == "investment" and plugin:
+                        if plugin and hasattr(plugin, 'execute_task_direct'):
                             try:
-                                result = await self._execute_investment_direct(plugin, task)
-                                logger.info(f"Direct execution successful, result length: {len(result)} characters")
+                                result = await plugin.execute_task_direct(task)
+                                logger.info(f"Direct execution successful for {agent_name}, result length: {len(result)} characters")
                                 return result
                             except Exception as direct_error:
                                 logger.error(f"Direct execution also failed: {direct_error}")
                                 raise RuntimeError(f"Both Agno and direct execution failed: {direct_error}")
                         else:
-                            logger.error("Direct execution workaround only available for investment agent")
+                            logger.warning(f"Plugin for '{agent_name}' does not implement execute_task_direct() method")
+                            logger.warning(f"To add Agno bug workaround, implement execute_task_direct(task: str) -> str in the plugin class")
                             raise RuntimeError(f"Agent execution error: {error_msg}")
                     else:
                         logger.error(f"Agent execution failed with error status: {error_msg}")
@@ -370,103 +371,6 @@ class AgentExecutor:
         
         else:
             raise ValueError("Job must specify either 'agent' or 'team'")
-    
-    async def _execute_investment_direct(self, plugin, task: str) -> str:
-        """
-        Direct execution workaround for investment agent to bypass Agno bug.
-        
-        Args:
-            plugin: Investment plugin instance
-            task: Task description
-            
-        Returns:
-            Investment report as markdown string
-        """
-        logger.info("Executing investment agent using direct tool calling...")
-        
-        # Parse the task to extract portfolio information
-        import re
-        
-        report_parts = []
-        report_parts.append("# Investment Portfolio Analysis Report\n")
-        report_parts.append(f"*Generated on {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n\n")
-        
-        try:
-            # Add portfolio stocks
-            logger.info("Adding stocks to portfolio...")
-            
-            # Extract stock info from task using regex - capture both EUR and USD prices
-            # Pattern: "23 Tesla (TSLA) shares @ €187.60 ($218.55)"
-            stock_pattern = r'(\d+)\s+([A-Za-z\s]+)\s+\(([A-Z]+)\)\s+shares?\s+@\s+€[\d.]+\s+\(\$([\d.]+)\)'
-            matches = re.findall(stock_pattern, task)
-            
-            if not matches:
-                # Fallback: try EUR-only pattern if USD prices not provided
-                stock_pattern_eur = r'(\d+)\s+([A-Za-z\s]+)\s+\(([A-Z]+)\)\s+shares?\s+@\s+€([\d.]+)'
-                matches = re.findall(stock_pattern_eur, task)
-                logger.warning("USD prices not found in task, using EUR prices directly (may cause conversion issues)")
-            
-            for shares, company, ticker, price in matches:
-                try:
-                    result = await plugin._add_to_portfolio(ticker, float(shares), float(price))
-                    logger.info(f"Added {ticker}: {result}")
-                except Exception as e:
-                    logger.warning(f"Failed to add {ticker}: {e}")
-            
-            # Get current portfolio
-            logger.info("Fetching current portfolio...")
-            portfolio_info = await plugin._get_portfolio()
-            report_parts.append("## Current Portfolio\n\n")
-            report_parts.append(portfolio_info)
-            report_parts.append("\n\n")
-            
-            # Analyze each stock
-            report_parts.append("## Individual Stock Analysis\n\n")
-            for _, _, ticker, _ in matches:
-                try:
-                    logger.info(f"Analyzing {ticker}...")
-                    analysis = await plugin._analyze_stock(ticker)
-                    report_parts.append(analysis)
-                    report_parts.append("\n\n")
-                except Exception as e:
-                    logger.warning(f"Failed to analyze {ticker}: {e}")
-            
-            # Get sell recommendations
-            report_parts.append("## Sell Recommendations\n\n")
-            for _, _, ticker, _ in matches:
-                try:
-                    logger.info(f"Checking sell recommendation for {ticker}...")
-                    sell_rec = await plugin._should_sell(ticker)
-                    report_parts.append(f"### {ticker}\n{sell_rec}\n\n")
-                except Exception as e:
-                    logger.warning(f"Failed to get sell recommendation for {ticker}: {e}")
-            
-            # Find buy opportunities
-            logger.info("Finding buy opportunities...")
-            try:
-                buy_opps = await plugin._find_buy_opportunities()
-                report_parts.append("## Buy Opportunities\n\n")
-                report_parts.append(buy_opps)
-                report_parts.append("\n\n")
-            except Exception as e:
-                logger.warning(f"Failed to find buy opportunities: {e}")
-            
-            # Generate overall portfolio report
-            logger.info("Generating portfolio summary...")
-            try:
-                summary = await plugin._generate_portfolio_report()
-                report_parts.append("## Portfolio Summary\n\n")
-                report_parts.append(summary)
-            except Exception as e:
-                logger.warning(f"Failed to generate portfolio report: {e}")
-            
-            final_report = "".join(report_parts)
-            logger.info(f"Direct execution completed successfully, generated {len(final_report)} character report")
-            return final_report
-            
-        except Exception as e:
-            logger.error(f"Direct execution failed: {e}", exc_info=True)
-            raise RuntimeError(f"Direct investment execution failed: {e}")
     
     async def cleanup(self):
         """Clean up resources (database connections, caches, etc.)."""
