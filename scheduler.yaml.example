@@ -1,0 +1,44 @@
+# Egile Agent Scheduler Configuration
+# Edit this file to configure your scheduled jobs
+
+jobs:
+  # Example: Daily Investment Report
+  - name: daily_investment_report
+    description: "Generate daily investment report with buy/sell recommendations"
+    schedule: "0 9 * * *"  # Every day at 9:00 AM
+    agent: investment
+    task: |
+      Generate a comprehensive investment report for my portfolio:
+      1. Analyze current holdings and market conditions
+      2. Provide sell recommendations with detailed reasoning
+      3. Suggest buy opportunities based on market analysis
+      4. Include risk assessment and portfolio diversification advice
+      
+      Focus on actionable insights with clear explanations.
+    output:
+      type: pdf
+      path: output/investments
+      title: "Daily Investment Report"
+      filename: investment_report
+
+# Agent definitions
+agents:
+  - name: investment
+    description: "Investment monitoring and analysis agent"
+    plugin_type: investment
+    mcp_port: 8004
+    instructions:
+      - "You are a professional investment advisor and portfolio analyst."
+      - "Always provide data-driven recommendations with clear reasoning."
+      - "Consider risk, diversification, and long-term strategy."
+      - "Be specific and actionable in your advice."
+
+# Uncomment to add more jobs:
+#
+# - name: weekly_summary
+#   schedule: "0 18 * * 5"  # Friday at 6 PM
+#   agent: investment
+#   task: "Create a weekly portfolio performance summary"
+#   output:
+#     type: markdown
+#     path: output/investments

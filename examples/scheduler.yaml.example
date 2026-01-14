@@ -1,0 +1,142 @@
+# Egile Agent Scheduler Configuration Example
+# ============================================
+# This file defines scheduled jobs that run agents and teams automatically.
+#
+# Job Fields:
+# - name: Unique identifier for the job (required)
+# - description: Human-readable description (optional)
+# - schedule: When to run the job - cron expression or dict (required)
+# - agent: Name of the agent to run (required if not using team)
+# - team: Name of the team to run (required if not using agent)
+# - task: The task/prompt to give the agent/team (required)
+# - output: Output configuration (optional but recommended)
+#   - type: Output format - "pdf", "markdown", "html", "json", "text"
+#   - path: Directory to save output (default: "output")
+#   - filename: Base filename (default: job_name_timestamp)
+#   - title: Title for PDF reports (optional)
+# - notify_on_error: Send notification on failure (optional, default: false)
+#
+# Schedule Format (Cron Expression):
+# - Use standard cron syntax: "minute hour day month day_of_week"
+# - Examples:
+#   - "0 9 * * *"          - Daily at 9:00 AM
+#   - "0 9 * * 1-5"        - Weekdays at 9:00 AM
+#   - "0 */6 * * *"        - Every 6 hours
+#   - "30 8 1 * *"         - First day of month at 8:30 AM
+#
+# Schedule Format (Dict):
+# - Use named time fields for clarity
+# - Fields: minute, hour, day, month, day_of_week
+# - Examples:
+#   - {hour: 9, minute: 0}           - Daily at 9:00 AM
+#   - {hour: 9, day_of_week: "mon"}  - Mondays at 9:00 AM
+
+# Example: Daily Investment Report
+# =================================
+jobs:
+  - name: daily_investment_report
+    description: "Generate daily investment report with buy/sell recommendations"
+    schedule: "0 9 * * *"  # Every day at 9:00 AM
+    agent: investment
+    task: |
+      Generate a comprehensive investment report for my portfolio:
+      1. Analyze current holdings and market conditions
+      2. Provide sell recommendations with detailed reasoning
+      3. Suggest buy opportunities based on market analysis
+      4. Include risk assessment and portfolio diversification advice
+      
+      Focus on actionable insights with clear explanations.
+    output:
+      type: pdf
+      path: output/investments
+      title: "Daily Investment Report"
+      filename: investment_report
+    notify_on_error: true
+
+  # Example: Weekly Portfolio Summary
+  # ==================================
+  - name: weekly_portfolio_summary
+    description: "Weekly portfolio performance summary"
+    schedule:
+      hour: 18
+      minute: 0
+      day_of_week: fri  # Friday at 6:00 PM
+    agent: investment
+    task: |
+      Create a weekly summary of my portfolio performance:
+      - Top gainers and losers this week
+      - Overall portfolio return
+      - Market sentiment analysis
+      - Key upcoming events to watch
+    output:
+      type: markdown
+      path: output/investments
+      filename: weekly_summary
+
+  # Example: Monthly Deep Analysis
+  # ===============================
+  # - name: monthly_deep_analysis
+  #   description: "Monthly comprehensive market analysis"
+  #   schedule: "0 10 1 * *"  # First day of month at 10:00 AM
+  #   team: investment_research_team
+  #   task: |
+  #     Conduct a comprehensive monthly analysis:
+  #     1. Review overall market trends and economic indicators
+  #     2. Deep dive into each portfolio holding
+  #     3. Identify new investment opportunities across sectors
+  #     4. Provide strategic recommendations for next month
+  #   output:
+  #     type: pdf
+  #     path: output/investments/monthly
+  #     title: "Monthly Investment Analysis"
+
+  # Example: Hourly Market Watch (for active traders)
+  # ==================================================
+  # - name: market_watch
+  #   description: "Monitor market conditions every hour during trading hours"
+  #   schedule:
+  #     hour: "9-16"  # 9 AM to 4 PM
+  #     minute: 0
+  #     day_of_week: "mon-fri"
+  #   agent: investment
+  #   task: "Check current market conditions and alert on significant movements in my portfolio"
+  #   output:
+  #     type: json
+  #     path: output/market_watch
+
+# Agent Configurations (if not using egile-agent-hub)
+# ====================================================
+# If you want to define agents directly in this file instead of using
+# the hub, you can add them here. Otherwise, the scheduler will load
+# agents from the hub's agents.yaml file.
+
+agents:
+  - name: investment
+    description: "Investment monitoring and analysis agent"
+    plugin_type: investment
+    mcp_port: 8004
+    instructions:
+      - "You are a professional investment advisor and portfolio analyst."
+      - "Always provide data-driven recommendations with clear reasoning."
+      - "Consider risk, diversification, and long-term strategy."
+      - "Be specific and actionable in your advice."
+
+# Team Configurations (if not using egile-agent-hub)
+# ===================================================
+# teams:
+#   - name: investment_research_team
+#     description: "Team for comprehensive investment research"
+#     members:
+#       - investment
+#       - market_research
+#     instructions:
+#       - "Coordinate thorough investment research and analysis."
+#       - "Cross-validate recommendations across team members."
+
+# Notes:
+# ======
+# 1. Jobs reference agents or teams by name
+# 2. Agents/teams can be defined here or loaded from egile-agent-hub
+# 3. Output files are automatically timestamped
+# 4. PDF reports work great for daily briefings
+# 5. Use markdown for web-friendly reports
